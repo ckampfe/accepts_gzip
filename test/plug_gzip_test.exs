@@ -1,8 +1,8 @@
-defmodule PlugGzipTest do
+defmodule AcceptsGzipTest do
   use ExUnit.Case, async: true
-  doctest PlugGzip
+  doctest AcceptsGzip
 
-  test PlugGzip do
+  test AcceptsGzip do
     data = "{\"name\":\"foo\",\"user_id\":\"1234\"}"
     compressed_data = :zlib.gzip(data)
 
@@ -20,16 +20,33 @@ defmodule PlugGzipTest do
                          {"accept", "*/*"}, {"content-type", "application/json"},
                          {"content-encoding", "gzip"},
                          {"content-length", String.length(compressed_data)}]}
-    result = PlugGzip.call(conn, [])
+    result = AcceptsGzip.call(conn, [])
     {_, req} = result.adapter
 
     assert elem(req, 21) == data
+
     assert(
       req
       |> elem(16)
       |> Enum.find(fn({k,_}) -> k == "content-length" end)
       |> elem(1)
       |> String.to_integer == String.length(data)
+    )
+
+    assert(
+      req
+      |> elem(16)
+      |> Enum.find(fn({k,_}) -> k == "raw-payload-size" end)
+      |> elem(1)
+      |> String.to_integer == String.length(data)
+    )
+
+    assert(
+      req
+      |> elem(16)
+      |> Enum.find(fn({k,_}) -> k == "compressed-payload-size" end)
+      |> elem(1)
+      |> String.to_integer == String.length(compressed_data)
     )
   end
 end

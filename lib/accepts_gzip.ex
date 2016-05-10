@@ -1,4 +1,4 @@
-defmodule PlugGzip do
+defmodule AcceptsGzip do
   def init(default), do: default
   def call(conn, _opts) do
     if gzip?(conn) do
@@ -11,7 +11,9 @@ defmodule PlugGzip do
       new_headers =
         headers
         |> Enum.reject(fn({k,_}) -> k == "content-length" end)
-        |> (&([content_length_header(decompressed_request_body) | &1])).()
+        |> (&([length_header("raw-payload-size", decompressed_request_body) | &1])).()
+        |> (&([length_header("compressed-payload-size", raw_request_body) | &1])).()
+        |> (&([length_header("content-length", decompressed_request_body) | &1])).()
 
       new_req =
         req
@@ -36,8 +38,8 @@ defmodule PlugGzip do
     put_elem(req, 21, request_body)
   end
 
-  defp content_length_header(content) do
-    {"content-length", content |> String.length |> to_string}
+  defp length_header(key, payload) do
+    {key, payload |> String.length |> to_string}
   end
 
   defp gzip?(conn) do
